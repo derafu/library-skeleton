@@ -1,8 +1,8 @@
 {
-    "name": "derafu/project",
-    "description": "Derafu: Project - Slogan",
+    "name": "derafu/library-skeleton",
+    "description": "Derafu: Library Skeleton - Template of a Derafu library",
     "type": "project",
-    "homepage": "https://www.derafu.dev/docs/core/foundation",
+    "homepage": "https://www.derafu.dev/docs/core/library-skeleton",
     "license": "MIT",
     "authors": [
         {
@@ -11,8 +11,8 @@
         }
     ],
     "support": {
-        "issues": "https://github.com/derafu/project/issues",
-        "source": "https://github.com/derafu/project"
+        "issues": "https://github.com/derafu/library-skeleton/issues",
+        "source": "https://github.com/derafu/library-skeleton"
     },
     "autoload": {
         "psr-4": {
@@ -26,13 +26,14 @@
     },
     "require": {
         "php": "^8.5",
-        "derafu/foundation": "dev-main"
+        "derafu/translation": "dev-main"
     },
     "require-dev": {
         "ext-xdebug": "*",
-        "friendsofphp/php-cs-fixer": "^3.94",
-        "phpstan/phpstan": "^1.12",
-        "phpunit/phpunit": "^11.5"
+        "friendsofphp/php-cs-fixer": "^3.95",
+        "phpstan/phpstan": "^2.2",
+        "phpunit/phpunit": "^13.4",
+        "nikic/php-parser": "^5.9"
     },
     "scripts": {
         "docs": "php tools/phpdocumentor run --config=phpdoc.xml",
@@ -40,20 +41,11 @@
         "phpcs-fix": "vendor/bin/php-cs-fixer fix -v --config=php-cs-fixer.php",
         "phpcs": "vendor/bin/php-cs-fixer fix -v --dry-run --diff --config=php-cs-fixer.php",
         "phpstan": "vendor/bin/phpstan analyse --configuration=phpstan.neon --memory-limit=1G",
-        "phpstan-export": "vendor/bin/phpstan analyse --configuration=phpstan.neon --level 9 --generate-baseline",
-        "build": "npm run build",
-        "post-install-cmd": [
-            "Derafu\\Foundation\\Installer::copyFiles"
-        ],
-        "post-update-cmd": [
-            "Derafu\\Foundation\\Installer::copyFiles"
-        ]
+        "phpstan-export": "vendor/bin/phpstan analyse --configuration=phpstan.neon --level 9 --generate-baseline"
     },
     "minimum-stability": "dev",
     "prefer-stable": true,
-    "config": {
-        "allow-plugins": {
-            "composer/installers": true
-        }
+    "suggest": {
+        "nikic/php-parser": "Required by the tests of the messages of the package (Derafu\\Translation\\Lint reads the code)."
     }
 }
