@@ -1,7 +1,7 @@
 {
     "name": "derafu/library-skeleton",
     "description": "Derafu: Library Skeleton - Template of a Derafu library",
-    "type": "project",
+    "type": "library",
     "homepage": "https://www.derafu.dev/docs/core/library-skeleton",
     "license": "MIT",
     "authors": [
