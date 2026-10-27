@@ -12,22 +12,22 @@ declare(strict_types=1);
 
 namespace Derafu\TestsProject;
 
+use Derafu\Project\Contract\TeapotInterface;
 use Derafu\Project\Teapot;
 use Derafu\Project\Translation\ProjectTranslationResourceProvider;
 use Derafu\Translation\Exception\Logic\TranslatableInvalidArgumentException;
-use Derafu\Translation\TranslatorFactory;
 use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Config\FileLocator;
-use Symfony\Component\DependencyInjection\Argument\TaggedIteratorArgument;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
-use Symfony\Component\Translation\Translator;
+use Symfony\Component\DependencyInjection\ServiceLocator;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
- * Imports the actual package configuration and checks its provider both as a
- * service and through the translator of a consuming application. Adapt the
- * construction checks and behavior examples when the library adds services.
+ * Loads the package's real configuration through a YAML consumer fixture.
+ * Keep application services, translators, overrides and test locators in YAML;
+ * only container bootstrapping belongs in this test's PHP infrastructure.
  */
 #[CoversNothing]
 final class ServicesTest extends TestCase
@@ -35,45 +35,48 @@ final class ServicesTest extends TestCase
     private function loadContainer(): ContainerBuilder
     {
         $container = new ContainerBuilder();
-        (new YamlFileLoader($container, new FileLocator(dirname(__DIR__, 2) . '/resources/config')))
-            ->load('project-services.yaml');
+        (new YamlFileLoader($container, new FileLocator(dirname(__DIR__) . '/fixtures/services')))
+            ->load('services.yaml');
 
         return $container;
     }
 
-    private function compile(ContainerBuilder $container): void
+    /** @return ServiceLocator<object> */
+    private function services(ContainerBuilder $container): ServiceLocator
     {
-        // Keep package services reachable so unused-private-service removal
-        // cannot hide an invalid definition from the construction checks.
-        foreach ($container->getDefinitions() as $definition) {
-            $definition->setPublic(true);
-        }
-        foreach ($container->getAliases() as $alias) {
-            $alias->setPublic(true);
-        }
         $container->compile();
-    }
+        $services = $container->get('test.project_services');
+        self::assertInstanceOf(ServiceLocator::class, $services);
 
-    private function consumerTranslator(): Translator
-    {
-        $container = $this->loadContainer();
-        // The application chooses its own translator and locale. The package
-        // only contributes its resource provider through the declared tag.
-        $container->register('app.translator', Translator::class)
-            ->setFactory([TranslatorFactory::class, 'create'])
-            ->setArguments(['es', ['en'], new TaggedIteratorArgument('derafu_translation.resource_provider')]);
-        $this->compile($container);
-        $translator = $container->get('app.translator');
-        self::assertInstanceOf(Translator::class, $translator);
-
-        return $translator;
+        return $services;
     }
 
     public function testEveryConfiguredServiceCanBeConstructed(): void
     {
+        $services = $this->services($this->loadContainer());
+        foreach (array_keys($services->getProvidedServices()) as $id) {
+            self::assertTrue(class_exists($id) || interface_exists($id));
+            self::assertInstanceOf($id, $services->get($id));
+        }
+    }
+
+    public function testThePackageRegistersItsServiceByInterfaceAndKeepsItPrivate(): void
+    {
         $container = $this->loadContainer();
-        $this->compile($container);
-        self::assertInstanceOf(ProjectTranslationResourceProvider::class, $container->get(ProjectTranslationResourceProvider::class));
+        self::assertTrue($container->hasDefinition(TeapotInterface::class));
+        self::assertFalse($container->getDefinition(TeapotInterface::class)->isPublic());
+        self::assertFalse($container->has(Teapot::class));
+        self::assertFalse($container->getDefinition(ProjectTranslationResourceProvider::class)->isPublic());
+        $services = $this->services($container);
+        self::assertSame($services->get(TeapotInterface::class), $services->get(TeapotInterface::class));
+    }
+
+    public function testTheConfiguredTeapotBrewsTeaAndRemainsStringable(): void
+    {
+        $teapot = $this->services($this->loadContainer())->get(TeapotInterface::class);
+        self::assertInstanceOf(TeapotInterface::class, $teapot);
+        self::assertSame("I'm a teapot", (string) $teapot);
+        self::assertSame('The tea is ready.', $teapot->brew('Tea'));
     }
 
     public function testTheTaggedProviderExposesThePackageCatalogue(): void
@@ -83,8 +86,7 @@ final class ServicesTest extends TestCase
             ProjectTranslationResourceProvider::class,
             $container->findTaggedServiceIds('derafu_translation.resource_provider')
         );
-        $this->compile($container);
-        $provider = $container->get(ProjectTranslationResourceProvider::class);
+        $provider = $this->services($container)->get(ProjectTranslationResourceProvider::class);
         self::assertInstanceOf(ProjectTranslationResourceProvider::class, $provider);
         $directories = [...$provider->getDirectories()];
         self::assertCount(1, $directories);
@@ -94,9 +96,13 @@ final class ServicesTest extends TestCase
 
     public function testTheConsumersTranslatorUsesTheTaggedResourcesForARealError(): void
     {
-        $translator = $this->consumerTranslator();
+        $services = $this->services($this->loadContainer());
+        $translator = $services->get(TranslatorInterface::class);
+        self::assertInstanceOf(TranslatorInterface::class, $translator);
+        $teapot = $services->get(TeapotInterface::class);
+        self::assertInstanceOf(TeapotInterface::class, $teapot);
         try {
-            (new Teapot())->brew('coffee');
+            $teapot->brew('coffee');
             self::fail('A teapot accepted a drink other than tea.');
         } catch (TranslatableInvalidArgumentException $exception) {
             self::assertSame('Una tetera no puede preparar coffee.', $exception->trans($translator));

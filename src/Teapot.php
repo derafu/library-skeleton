@@ -12,8 +12,8 @@ declare(strict_types=1);
 
 namespace Derafu\Project;
 
+use Derafu\Project\Contract\TeapotInterface;
 use Derafu\Translation\Exception\Logic\TranslatableInvalidArgumentException as InvalidArgumentException;
-use Stringable;
 
 /**
  * Represents a teapot.
@@ -22,7 +22,7 @@ use Stringable;
  * library has: a test that covers it and an exception whose message is
  * translatable. Delete it when the library has code of its own.
  */
-final class Teapot implements Stringable
+final class Teapot implements TeapotInterface
 {
     /**
      * {@inheritDoc}

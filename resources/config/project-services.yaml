@@ -4,12 +4,43 @@
 #   imports:
 #       - { resource: '../vendor/derafu/library-skeleton/resources/config/project-services.yaml' }
 
+# Service configuration conventions:
+# - Register a single implementation under its interface ID, with class: (or
+#   an approved factory), and reference dependencies by their interface IDs.
+# - Do not add concrete-class aliases or a second implementation registration.
+# - Keep services private unless direct container access is explicitly needed.
+# - Include the complete reusable graph; import dependency configurations when
+#   appropriate. Runtime products belong to factories, not shared services.
+# - Parameters use derafu.<package>.<concept>[.<detail>], with dots between levels
+#   and lowercase snake_case within a segment. Keep array keys aligned with the
+#   public API. Parameter naming does not rename service tags.
+# - Register collection members individually with explicit tags. Inject their
+#   tagged collection, using indexing/priority when needed. Configuration-data
+#   arrays are not service collections. _instanceof rules do not cross imports.
+#
+# Examples to adapt when the library needs parameters or plugin services:
+# parameters:
+#     derafu.project.options: {}
+#     derafu.project.paths: []
+#
+# Under a consumer service's arguments:
+#     $dependency: '@Derafu\Project\Contract\DependencyInterface'
+#     $options: '%derafu.project.options%'
+#     $plugins: !tagged_iterator { tag: derafu_project.plugin, index_by: key }
+#
+# Under each plugin service (distinct implementations of a collection):
+#     tags:
+#         - { name: derafu_project.plugin, key: example, priority: 0 }
+#
 services:
 
     _defaults:
         autowire: true
         autoconfigure: true
         public: false
+
+    Derafu\Project\Contract\TeapotInterface:
+        class: Derafu\Project\Teapot
 
     # Feeds resources/translations into the consuming app's Translator (the
     # app must pass $resourceProviders: !tagged_iterator
